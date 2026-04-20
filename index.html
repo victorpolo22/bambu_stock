@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="BambuStock">
+  <title>BambuStock — Gestor de filamentos</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.svg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #2e2e2e;
+      --text: #f0f0f0;
+      --text2: #888;
+      --text3: #555;
+      --green: #1DB954;
+      --green-dim: #1a3d28;
+      --amber: #f59e0b;
+      --amber-dim: #3d2e0a;
+      --red: #ef4444;
+      --red-dim: #3d1010;
+      --radius: 10px;
+      --radius-lg: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Header */
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+    .logo { width: 34px; height: 34px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo svg { width: 18px; height: 18px; }
+    .topbar-title { font-size: 16px; font-weight: 600; }
+    .topbar-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+    .topbar-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    /* Buttons */
+    .btn { border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; padding: 9px 14px; display: flex; align-items: center; gap: 6px; transition: opacity 0.15s; }
+    .btn:active { opacity: 0.75; }
+    .btn-primary { background: var(--green); color: #000; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+    .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid #5a1a1a; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 16px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+    .stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-val { font-size: 20px; font-weight: 600; font-family: 'DM Mono', monospace; }
+
+    /* Filament cards */
+    .list { padding: 0 16px 100px; display: flex; flex-direction: column; gap: 10px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .card-name { font-size: 14px; font-weight: 600; }
+    .card-cat { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .card-color { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); margin-top: 4px; }
+    .color-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border); }
+    .badge { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+    .badge-ok { background: var(--green-dim); color: var(--green); }
+    .badge-low { background: var(--amber-dim); color: var(--amber); }
+    .badge-empty { background: var(--red-dim); color: var(--red); }
+    .card-mid { margin: 12px 0 8px; }
+    .bar-wrap { width: 100%; height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .card-nums { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+    .card-grams { font-size: 18px; font-weight: 600; font-family: 'DM Mono', monospace; }
+    .card-detail { font-size: 11px; color: var(--text2); text-align: right; }
+    .card-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .card-notes { font-size: 11px; color: var(--text3); margin-top: 6px; font-style: italic; }
+
+    /* FAB */
+    .fab { position: fixed; bottom: 24px; right: 16px; width: 56px; height: 56px; border-radius: 50%; background: var(--green); color: #000; border: none; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(29,185,84,0.35); z-index: 20; transition: transform 0.15s; }
+    .fab:active { transform: scale(0.92); }
+
+    /* Bottom sheet / modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 30; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+    .overlay.open { opacity: 1; pointer-events: all; }
+    .sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 16px 40px; width: 100%; max-width: 500px; max-height: 92vh; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); }
+    .overlay.open .sheet { transform: translateY(0); }
+    .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 20px; }
+    .sheet-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+    .field { margin-bottom: 14px; }
+    .field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 6px; font-weight: 500; }
+    .field input, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 11px 12px; outline: none; }
+    .field input:focus, .field select:focus { border-color: var(--green); }
+    .field select option { background: var(--surface2); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .warn { font-size: 12px; color: var(--red); margin-top: 6px; display: none; }
+    .sheet-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .sheet-actions .btn { flex: 1; justify-content: center; padding: 13px; font-size: 15px; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty p { font-size: 14px; }
+
+    /* Log */
+    .log-section { padding: 0 16px; margin-bottom: 16px; }
+    .log-title { font-size: 12px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .log-entry { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .log-entry:last-child { border-bottom: none; }
+    .log-minus { color: var(--red); font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+
+    /* Color map */
+    @media (max-width: 380px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <svg viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="16" height="16" rx="3" fill="#000"/><path d="M9 4L13 8L9 12L5 8L9 4Z" fill="white"/></svg>
+  </div>
+  <div>
+    <div class="topbar-title">BambuStock</div>
+    <div class="topbar-sub">Gestor de filamentos</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-secondary" onclick="openSheet('add')">+ Añadir</button>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div id="log-section" class="log-section" style="display:none">
+  <div class="log-title">Últimas impresiones</div>
+  <div id="log-list"></div>
+</div>
+
+<div class="list" id="list"></div>
+
+<button class="fab" onclick="openSheet('print')" title="Registrar impresión">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="8" width="18" height="13" rx="2" stroke="black" stroke-width="2"/><path d="M7 8V5.5A2.5 2.5 0 0 1 9.5 3h5A2.5 2.5 0 0 1 17 5.5V8" stroke="black" stroke-width="2"/><rect x="7" y="13" width="10" height="2" rx="1" fill="black"/></svg>
+</button>
+
+<!-- Print sheet -->
+<div class="overlay" id="overlay-print">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Registrar impresión</div>
+    <div class="field"><label>¿Qué vas a imprimir?</label><input type="text" id="p-desc" placeholder="Ej: soporte cámara, calibración..."></div>
+    <div class="field"><label>Material</label><select id="p-mat"></select></div>
+    <div class="field"><label>Gramos a gastar</label><input type="number" id="p-grams" inputmode="numeric" placeholder="Ej: 45"></div>
+    <div class="warn" id="p-warn"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('print')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmPrint()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add sheet -->
+<div class="overlay" id="overlay-add">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="add-title">Añadir filamento</div>
+    <div class="field">
+      <label>Categoría</label>
+      <select id="a-cat">
+        <option>Filamento PLA</option><option>Filamento PLA-CF</option><option>Filamento PETG</option>
+        <option>Filamento ABS</option><option>Filamento ASA</option><option>Filamento TPU</option>
+        <option>Filamento Soporte</option><option>Otro</option>
+      </select>
+    </div>
+    <div class="field"><label>Nombre del producto</label><input type="text" id="a-prod" placeholder="Ej: PLA Basic 1kg"></div>
+    <div class="field"><label>Color</label><input type="text" id="a-color" placeholder="Ej: Verde"></div>
+    <div class="row2">
+      <div class="field"><label>Nº de rollos</label><input type="number" id="a-rolls" inputmode="numeric" value="1" min="1"></div>
+      <div class="field"><label>Stock inicial (g)</label><input type="number" id="a-grams" inputmode="numeric" placeholder="1000"></div>
+    </div>
+    <div class="field"><label>Stock mínimo (g)</label><input type="number" id="a-min" inputmode="numeric" value="200"></div>
+    <div class="field"><label>Notas (opcional)</label><input type="text" id="a-notes" placeholder="Sin abrir, parcial..."></div>
+    <div class="warn" id="a-warn"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('add')">Cancelar</button>
+      <button class="btn btn-primary" id="a-confirm" onclick="confirmAdd()">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #2e2e2e;color:#f0f0f0;padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:50;white-space:nowrap"></div>
+
+<script>
+const STORE_KEY = 'bambustock_v1';
+const LOG_KEY = 'bambustock_log_v1';
+
+const COLOR_MAP = {
+  'negro':'#1a1a1a','blanco':'#f5f5f5','rojo':'#ef4444','azul':'#3b82f6',
+  'verde':'#22c55e','amarillo':'#eab308','naranja':'#f97316','morado':'#a855f7',
+  'rosa':'#ec4899','gris':'#6b7280','marrón':'#92400e','transparente':'#e5e5e5',
+  'natural':'#d4c5a9','plateado':'#cbd5e1','dorado':'#ca8a04','cyan':'#06b6d4',
+};
+
+function colorDot(c) {
+  const key = c.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const col = COLOR_MAP[key] || '#555';
+  return `<span class="color-dot" style="background:${col}"></span>`;
+}
+
+let stock = JSON.parse(localStorage.getItem(STORE_KEY) || 'null') || [
+  {cat:"Filamento ABS",    prod:"ABS 1kg",      color:"Azul",   rolls:1, grams:800,  min:200, notes:""},
+  {cat:"Filamento PLA",    prod:"PLA Basic 1kg", color:"Blanco", rolls:2, grams:2000, min:200, notes:""},
+  {cat:"Filamento PLA",    prod:"PLA Basic 1kg", color:"Rojo",   rolls:1, grams:1000, min:200, notes:"Sin abrir"},
+  {cat:"Filamento PLA-CF", prod:"PLA-CF 1kg",    color:"Negro",  rolls:2, grams:1100, min:200, notes:"1 parcial (100g) + 1 sin abrir"},
+];
+let log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+let editIdx = -1;
+
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(stock));
+  localStorage.setItem(LOG_KEY, JSON.stringify(log));
+}
+
+function statusInfo(g, min) {
+  if (g <= 0) return { label:'Sin stock', cls:'badge-empty', bar:'#ef4444' };
+  if (g <= min) return { label:'Reponer', cls:'badge-low', bar:'#f59e0b' };
+  return { label:'OK', cls:'badge-ok', bar:'#1DB954' };
+}
+
+function render() {
+  const totalG = stock.reduce((a,s)=>a+s.grams,0);
+  const low = stock.filter(s=>s.grams>0&&s.grams<=s.min).length;
+  const empty = stock.filter(s=>s.grams<=0).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-label">Materiales</div><div class="stat-val">${stock.length}</div></div>
+    <div class="stat"><div class="stat-label">Stock total</div><div class="stat-val">${totalG >= 1000 ? (totalG/1000).toFixed(1)+'kg' : totalG+'g'}</div></div>
+    <div class="stat"><div class="stat-label">A reponer</div><div class="stat-val" style="color:${low>0?'#f59e0b':'#f0f0f0'}">${low}</div></div>
+    <div class="stat"><div class="stat-label">Sin stock</div><div class="stat-val" style="color:${empty>0?'#ef4444':'#f0f0f0'}">${empty}</div></div>
+  `;
+
+  const list = document.getElementById('list');
+  if (stock.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📦</div><p>No hay filamentos.<br>Pulsa "+ Añadir" para empezar.</p></div>`;
+  } else {
+    list.innerHTML = stock.map((s,i) => {
+      const st = statusInfo(s.grams, s.min);
+      const maxG = Math.max(s.rolls * 1000, s.grams, 1);
+      const pct = Math.min(100, Math.round(s.grams / maxG * 100));
+      return `<div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${s.prod}</div>
+            <div class="card-cat">${s.cat}</div>
+            <div class="card-color">${colorDot(s.color)} ${s.color}</div>
+          </div>
+          <span class="badge ${st.cls}">${st.label}</span>
+        </div>
+        <div class="card-mid">
+          <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${st.bar}"></div></div>
+        </div>
+        <div class="card-nums">
+          <div class="card-grams">${s.grams}g</div>
+          <div class="card-detail">${s.rolls} rollo${s.rolls!==1?'s':''} · mín. ${s.min}g · ${pct}%</div>
+        </div>
+        ${s.notes ? `<div class="card-notes">${s.notes}</div>` : ''}
+        <div class="card-actions">
+          <button class="btn btn-secondary" style="flex:1;justify-content:center" onclick="openEdit(${i})">Editar</button>
+          <button class="btn btn-danger" onclick="deleteItem(${i})">Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Log
+  const logSec = document.getElementById('log-section');
+  if (log.length > 0) {
+    logSec.style.display = 'block';
+    document.getElementById('log-list').innerHTML = [...log].reverse().slice(0,5).map(l=>
+      `<div class="log-entry">
+        <div><span style="font-weight:600">${l.mat}</span><br><span style="font-size:11px;color:#888">${l.desc} · ${l.date}</span></div>
+        <div class="log-minus">-${l.g}g</div>
+      </div>`
+    ).join('');
+  } else {
+    logSec.style.display = 'none';
+  }
+
+  // Update print selector
+  const sel = document.getElementById('p-mat');
+  if (sel) {
+    sel.innerHTML = stock.map((s,i)=>`<option value="${i}">${s.prod} ${s.color} (${s.grams}g)</option>`).join('');
+  }
+}
+
+function openSheet(name) {
+  document.getElementById('overlay-'+name).classList.add('open');
+  if (name === 'add') {
+    editIdx = -1;
+    document.getElementById('add-title').textContent = 'Añadir filamento';
+    document.getElementById('a-confirm').textContent = 'Añadir';
+    document.getElementById('a-prod').value='';
+    document.getElementById('a-color').value='';
+    document.getElementById('a-rolls').value=1;
+    document.getElementById('a-grams').value='';
+    document.getElementById('a-min').value=200;
+    document.getElementById('a-notes').value='';
+    document.getElementById('a-warn').style.display='none';
+  }
+  if (name === 'print') {
+    document.getElementById('p-desc').value='';
+    document.getElementById('p-grams').value='';
+    document.getElementById('p-warn').style.display='none';
+    render();
+  }
+}
+
+function openEdit(i) {
+  editIdx = i;
+  const s = stock[i];
+  document.getElementById('add-title').textContent = 'Editar filamento';
+  document.getElementById('a-confirm').textContent = 'Guardar';
+  document.getElementById('a-cat').value = s.cat;
+  document.getElementById('a-prod').value = s.prod;
+  document.getElementById('a-color').value = s.color;
+  document.getElementById('a-rolls').value = s.rolls;
+  document.getElementById('a-grams').value = s.grams;
+  document.getElementById('a-min').value = s.min;
+  document.getElementById('a-notes').value = s.notes || '';
+  document.getElementById('a-warn').style.display='none';
+  document.getElementById('overlay-add').classList.add('open');
+}
+
+function closeSheet(name) {
+  document.getElementById('overlay-'+name).classList.remove('open');
+}
+
+function confirmPrint() {
+  const desc = document.getElementById('p-desc').value.trim() || 'sin descripción';
+  const idx = parseInt(document.getElementById('p-mat').value);
+  const g = parseInt(document.getElementById('p-grams').value);
+  const w = document.getElementById('p-warn');
+  if (!g || g <= 0) { w.style.display='block'; w.textContent='Introduce los gramos a gastar.'; return; }
+  if (g > stock[idx].grams) { w.style.display='block'; w.textContent=`Stock insuficiente — disponible: ${stock[idx].grams}g`; return; }
+  stock[idx].grams -= g;
+  const now = new Date();
+  log.push({ mat: stock[idx].prod+' '+stock[idx].color, desc, g, date: now.toLocaleDateString('es-ES') });
+  save(); closeSheet('print'); render();
+  showToast(`-${g}g descontados`);
+}
+
+function confirmAdd() {
+  const cat = document.getElementById('a-cat').value;
+  const prod = document.getElementById('a-prod').value.trim();
+  const color = document.getElementById('a-color').value.trim();
+  const rolls = parseInt(document.getElementById('a-rolls').value) || 1;
+  const grams = parseInt(document.getElementById('a-grams').value);
+  const min = parseInt(document.getElementById('a-min').value) || 200;
+  const notes = document.getElementById('a-notes').value.trim();
+  const w = document.getElementById('a-warn');
+  if (!prod || !color || !grams) { w.style.display='block'; w.textContent='Rellena nombre, color y stock inicial.'; return; }
+  if (editIdx >= 0) {
+    stock[editIdx] = { cat, prod, color, rolls, grams, min, notes };
+  } else {
+    stock.push({ cat, prod, color, rolls, grams, min, notes });
+    stock.sort((a,b)=>a.cat.localeCompare(b.cat)||a.color.localeCompare(b.color));
+  }
+  save(); closeSheet('add'); render();
+  showToast(editIdx >= 0 ? 'Filamento actualizado' : `${prod} ${color} añadido`);
+  editIdx = -1;
+}
+
+function deleteItem(i) {
+  if (!confirm(`¿Eliminar ${stock[i].prod} ${stock[i].color}?`)) return;
+  stock.splice(i, 1);
+  save(); render();
+  showToast('Filamento eliminado');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2500);
+}
+
+// Close overlay on bg click
+['print','add'].forEach(name => {
+  document.getElementById('overlay-'+name).addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSheet(name);
+  });
+});
+
+render();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
