@@ -2,7 +2,7 @@
   "name": "BambuStock — Gestor de filamentos",
   "short_name": "BambuStock",
   "description": "Gestor de stock de filamentos para impresoras Bambu Lab",
-  "start_url": "/bambulab-stock/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#1A1A1A",
