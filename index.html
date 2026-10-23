@@ -125,6 +125,9 @@
     <div class="topbar-sub">Gestor de filamentos</div>
   </div>
   <div class="topbar-actions">
+    <button class="btn btn-ghost" onclick="exportData()" title="Exportar stock.json">⬇</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" title="Importar stock.json">⬆</button>
+    <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(event)">
     <button class="btn btn-secondary" onclick="openSheet('add')">+ Añadir</button>
   </div>
 </div>
@@ -374,6 +377,42 @@ function deleteItem(i) {
   stock.splice(i, 1);
   save(); render();
   showToast('Filamento eliminado');
+}
+
+function exportData() {
+  const data = { app: 'bambustock', version: 1, exported: new Date().toISOString(), stock, log };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'stock.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('stock.json exportado');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data.stock)) throw new Error('formato');
+      if (!confirm(`Importar ${data.stock.length} filamentos? Sustituirá los datos actuales.`)) return;
+      stock = data.stock;
+      log = Array.isArray(data.log) ? data.log : [];
+      save(); render();
+      showToast('Datos importados');
+    } catch (err) {
+      alert('El archivo no es un stock.json válido.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.readAsText(file);
 }
 
 function showToast(msg) {
